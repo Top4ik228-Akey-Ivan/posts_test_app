@@ -1,41 +1,103 @@
-import { useState } from "react";
-import { useGetPostsQuery, type Post } from "../services/postsApi";
+import { useEffect, useMemo, useState } from "react";
+import { useDeletePostFromApiMutation, useGetPostsQuery } from "../services/postsApi";
+import { useDispatch, useSelector } from "react-redux";
+import { type RootState } from "../app/store";
+import { setPosts, deletePost, toggleLike } from "../app/postsSlice";
+import { message, Pagination, Spin, Tabs } from "antd";
 import { PostCard } from "../components/PostCard";
-import { Spin, Pagination } from "antd";
 
 export const PostsPage = () => {
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [pageSize, setPageSize] = useState<number>(10);
+    const dispatch = useDispatch();
 
-    const { data, isLoading, error } = useGetPostsQuery({
+    const posts = useSelector((state: RootState) => state.posts.posts);
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [activeTab, setActiveTab] = useState("all");
+
+    const { data, isLoading } = useGetPostsQuery({
         page: currentPage,
         limit: pageSize,
     });
+    const [deletePostFromApi] = useDeletePostFromApiMutation();
 
-    const handlePageChange = (page: number, newPageSize?: number) => {
-        setCurrentPage(page);
-        if (newPageSize && newPageSize !== pageSize) {
-            setPageSize(newPageSize);
-            setCurrentPage(1);
+    useEffect(() => {
+        if (data) {
+            dispatch(setPosts(data));
+        }
+    }, [data, dispatch]);
+
+    const handleDelete = async (id: number) => {
+        dispatch(deletePost(id));
+        try {
+            await deletePostFromApi(id).unwrap
+            message.success('Пост удален');
+        } catch (err) {
+            message.error('Ошибка удаления');
+            console.error(err);
         }
     };
 
-    if (isLoading) return <Spin size="large" style={{ display: "block", margin: "50px auto" }} />;
-    if (error) return <div>Error loading posts</div>;
+    const handleLike = (id: number) => {
+        dispatch(toggleLike(id));
+    };
+
+    const filteredPosts = useMemo(() => {
+        return activeTab === "liked"
+            ? posts.filter((p) => p.liked)
+            : posts
+    }, [posts, activeTab])
+
+
+    if (isLoading)
+        return <Spin size="large" style={{ display: "block", margin: "40px auto" }} />;
 
     return (
-        <div style={{ maxWidth: 800, margin: "20px auto" }}>
-            {data?.map((post: Post) => (
-                <PostCard key={post.id} post={post} />
+        <div style={{ maxWidth: 800, margin: "0 auto", padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    items={[
+                        { key: "all", label: "Все посты" },
+                        { key: "liked", label: "Понравившиеся" },
+                    ]}
+                />
+            </div>
+
+
+            {filteredPosts.map((post) => (
+                <PostCard
+                    key={post.id}
+                    post={post}
+                    liked={post.liked ?? false}
+                    onLike={() => handleLike(post.id)}
+                    onDelete={() => handleDelete(post.id)}
+                />
             ))}
 
-            <Pagination
-                current={currentPage}
-                pageSize={pageSize}
-                total={100}
-                onChange={handlePageChange}
-                style={{ display: 'flex', justifyContent: 'center' }}
-            />
+            {activeTab === "all" && (
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                    <Pagination
+                        total={100}
+                        current={currentPage}
+                        pageSize={pageSize}
+                        onChange={(page, size) => {
+                            setCurrentPage(page);
+                            setPageSize(size);
+                        }}
+                        showSizeChanger
+                        pageSizeOptions={["10", "20", "50", "100"]}
+                        style={{ textAlign: "center", marginTop: 20 }}
+                    />
+                </div>
+            )}
+
+            {activeTab === "liked" && filteredPosts.length === 0 && (
+                <div style={{ textAlign: "center", marginTop: 40, fontSize: 18 }}>
+                    Нет понравившихся постов ❤️
+                </div>
+            )}
         </div>
     );
 };
