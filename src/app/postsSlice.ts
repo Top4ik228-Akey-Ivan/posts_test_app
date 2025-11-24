@@ -23,11 +23,14 @@ export const postsSlice = createSlice({
       const post = state.posts.find((p) => p.id === action.payload);
       if (post) post.liked = !post.liked;
     },
+    addPost(state, action: PayloadAction<Post>) {
+      state.posts.unshift(action.payload);
+    },
     deletePost(state, action: PayloadAction<number>) {
       state.posts = state.posts.filter((p) => p.id !== action.payload);
     },
   },
 });
 
-export const { setPosts, toggleLike, deletePost } = postsSlice.actions;
+export const { setPosts, toggleLike, addPost, deletePost } = postsSlice.actions;
 export default postsSlice.reducer;
