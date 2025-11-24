@@ -5,6 +5,8 @@ export interface Post {
   id: number;
   title: string;
   body: string;
+
+  liked?: boolean;
 }
 
 export const postsApi = createApi({
@@ -13,11 +15,16 @@ export const postsApi = createApi({
     baseUrl: "https://jsonplaceholder.typicode.com/",
   }),
   endpoints: (builder) => ({
-    // добавляем параметры _page и _limit
     getPosts: builder.query<Post[], { page: number; limit: number }>({
       query: ({ page, limit }) => `posts?_page=${page}&_limit=${limit}`,
+    }),
+    deletePostFromApi: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `posts/${id}`,
+        method: "DELETE",
+      }),
     }),
   }),
 });
 
-export const { useGetPostsQuery } = postsApi;
+export const { useGetPostsQuery, useDeletePostFromApiMutation } = postsApi;
