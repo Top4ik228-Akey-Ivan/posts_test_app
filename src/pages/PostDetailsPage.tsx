@@ -9,7 +9,9 @@ export const PostDetailsPage = () => {
     const postId = Number(id);
 
     const post = useSelector((state: RootState) =>
-        state.posts.posts.find((p) => p.id === postId)
+        state.posts.posts.find((p) => p.id === postId) || 
+        state.posts.createdPosts.find((p) => p.id === postId
+    )
     );
 
     if (!post)
