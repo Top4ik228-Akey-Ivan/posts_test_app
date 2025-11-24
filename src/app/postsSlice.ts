@@ -3,10 +3,12 @@ import type { Post } from "../services/postsApi";
 
 interface PostsState {
   posts: Post[];
+  createdPosts: Post[];
 }
 
 const initialState: PostsState = {
   posts: [],
+  createdPosts: []
 };
 
 export const postsSlice = createSlice({
@@ -24,7 +26,7 @@ export const postsSlice = createSlice({
       if (post) post.liked = !post.liked;
     },
     addPost(state, action: PayloadAction<Post>) {
-      state.posts.unshift(action.payload);
+      state.createdPosts.unshift(action.payload);
     },
     deletePost(state, action: PayloadAction<number>) {
       state.posts = state.posts.filter((p) => p.id !== action.payload);

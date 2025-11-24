@@ -3,18 +3,24 @@ import { useDeletePostFromApiMutation, useGetPostsQuery } from "../services/post
 import { useDispatch, useSelector } from "react-redux";
 import { type RootState } from "../app/store";
 import { setPosts, deletePost, toggleLike } from "../app/postsSlice";
-import { Button, message, Pagination, Spin, Tabs } from "antd";
+import { Input, Button, message, Pagination, Spin, Tabs } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { PostCard } from "../components/PostCard";
 import { useNavigate } from "react-router-dom";
+
+const { Search } = Input;
 
 export const PostsPage = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
     const posts = useSelector((state: RootState) => state.posts.posts);
-    console.log(posts);
+    const cretedPosts = useSelector((state: RootState) => state.posts.createdPosts);
+    const allPosts = useMemo(() => {
+        return [...cretedPosts, ...posts];
+    }, [cretedPosts, posts]);
 
+    const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [activeTab, setActiveTab] = useState("all");
@@ -27,17 +33,9 @@ export const PostsPage = () => {
 
     useEffect(() => {
         if (data) {
-            const currentPosts = [...posts];
-            const ids = new Set(currentPosts.map(p => p.id));
-            const newPostsFromApi = data.filter(p => !ids.has(p.id));
-            dispatch(setPosts([...newPostsFromApi, ...currentPosts]));
+            dispatch(setPosts(data));
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data, dispatch]);
-
-
-
-
 
     const handleDelete = async (id: number) => {
         dispatch(deletePost(id));
@@ -59,10 +57,11 @@ export const PostsPage = () => {
     };
 
     const filteredPosts = useMemo(() => {
-        return activeTab === "liked"
-            ? posts.filter((p) => p.liked)
-            : posts
-    }, [posts, activeTab])
+        return allPosts
+            .filter((p) => activeTab === "all" || (activeTab === "liked" && p.liked))
+            .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()));
+    }, [allPosts, activeTab, searchTerm]);
+
 
     if (isLoading)
         return <Spin size="large" style={{ display: "block", margin: "40px auto" }} />;
@@ -80,6 +79,16 @@ export const PostsPage = () => {
                 />
             </div>
 
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+                <Search
+                    placeholder="Поиск по заголовку"
+                    allowClear
+                    enterButton
+                    style={{ maxWidth: 800, width: "100%" }}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
 
             {filteredPosts.map((post) => (
                 <PostCard
